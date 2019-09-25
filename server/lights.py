@@ -1,95 +1,52 @@
-#!/usr/bin/python
 import RPi.GPIO as GPIO
 import time
-import requests
-from flask import (
-    Flask,
-    render_template
-)
-from flask_cors import CORS
 
 TEST = False
-GPIO.setmode(GPIO.BCM)
-
 # init list w/ pin numbers
 pinList = [2,3,4,17,27,22,10,9]
-pinState = 8*[GPIO.HIGH]
+initPinState = 8*[GPIO.HIGH]
 
-app = Flask(__name__, template_folder="templates")
-CORS(app)
+def init():
+    print("initiating lights library...")
+    GPIO.setmode(GPIO.BCM)
+    GPIO.setwarnings(False)
+    initRelays()
+
+def pinState(pin):
+    # TODO: fetch state from redis
+    return 8*[GPIO.HIGH]
+
+def setPinState(pin, state):
+    # TODO: set state in redis
+    print(pin, state)
+
+def arrayState():
+    # TODO: get states 0-7 from redis and compile into a list
+    return 8*[GPIO.HIGH]
 
 def toggle(pin):
-    #...
-    if (pin > 0 and pin <= 8):
-        s = pinState[pin-1]
+    if (pin > 0 and pin < len(pinList)):
+        s = pinState(pin)
         if (s == GPIO.HIGH):
             ns = GPIO.LOW
         else:
             ns = GPIO.HIGH
-        pinState[pin-1] = ns
-        for s in range(len(pinState)):
-            GPIO.output(pinList[s], pinState[s])
-        return color(pinState)
+        setPinState(pin, ns)
 
-@app.route('/')
-def index():
-    """
-    localhost:5000/
-    
-    :return: rendered template 'index.html'
-    """
-    return render_template('index.html')
+        # push new GPIO state list
+        for s in range(len(arrayState())):
+            GPIO.output(pinList[s], arrayState()[s])
 
-@app.route('/red')
-def red():
-    return toggle(4)
-@app.route('/green')
-def grn():
-    return toggle(3)
-@app.route('/blue')
-def blu():
-    return toggle(2)
-@app.route('/power')
-def pwr():
-    return toggle(1)
-@app.route('/status')
-def state():
-    return str(pinState[:4])
-@app.route('/kill')
-def kill():
-    return killRelays()
+        return arrayState()
 
-def main():
-    initRelays()
-    if (TEST):
-        inputLoop()
-    else:
-        runFlask()
-    killRelays()
+#def main():
+#    initRelays()
+#    if (TEST):
+#        inputLoop()
 
 def runFlask():
     print("Running flask server...")
     app.run(host='0.0.0.0', port=5000, debug=True)
-
-def color(pin_state):
-    s = ""
-    if (pin_state[0] == GPIO.LOW):
-        s = "lights off"
-    else:
-        if (pin_state[3] == GPIO.LOW):
-            s += "R"
-        else:
-            s += "_"
-        if (pin_state[2] == GPIO.LOW):
-            s += "G"
-        else:
-            s += "_"
-        if (pin_state[1] == GPIO.LOW):
-            s += "B"
-        else:
-            s += "_"
-    return s
-
 
 def initRelays(): 
     # loop thru pins, setting state to 'low'
@@ -128,4 +85,5 @@ def killRelays():
     for i in pinList:
         GPIO.output(i, GPIO.HIGH)
     return "dead"
-main()
+
+#main()
